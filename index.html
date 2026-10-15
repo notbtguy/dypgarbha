@@ -256,7 +256,7 @@ footer{position:relative;z-index:2;text-align:center;padding:30px 20px 60px;font
   new IntersectionObserver(function(e){pv=e[0].isIntersecting;sb()}).observe($('pass'));
   function sb(){bar.classList.toggle('on',scrollY>innerHeight*.6&&!pv)}
   addEventListener('scroll',sb,{passive:true});
-  function bt(){var d=Math.ceil((end-new Date())/864e5);$('barTxt').textContent=d>0?d+' days to Nav Jalsa':'Nav Jalsa is on!'}
+  function bt(){var d=Math.ceil((end-new Date())/864e5);$('barTxt').textContent=d>0?d+' days to Nav Jalsa':'A Sanidhya S Production'}
   bt();setInterval(bt,60000);
 })();
 </script>
