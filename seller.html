@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nav Jalsa Organiser</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+body{margin:0;padding:16px;font:16px system-ui,sans-serif;background:#14040a;color:#fff3dc;max-width:560px;margin-inline:auto}
+h1{font-size:22px;color:#f6cf6b;margin:6px 0 4px}
+label{display:block;font-size:13px;opacity:.8;margin-top:12px}
+input,textarea{width:100%;min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid #f6cf6b55;background:#00000050;color:#fff3dc;font:16px system-ui;margin-top:4px}
+button{min-height:46px;padding:0 18px;border-radius:12px;border:0;background:#ff8f26;color:#14040a;font:600 16px system-ui;margin:12px 8px 0 0}
+nav button{background:#ffffff18;color:#fff3dc}nav button.on{background:#f6cf6b;color:#14040a}
+section{display:none}section.on{display:block}
+#res{margin-top:16px;padding:16px;border-radius:16px;display:none;font-size:18px}
+#res.ok{display:block;background:#0f5a2a}#res.bad{display:block;background:#8a1620}
+video{width:100%;border-radius:14px;margin-top:12px;display:none}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}td,th{padding:6px 4px;border-bottom:1px solid #f6cf6b33;text-align:left}
+small{opacity:.7}
+</style></head><body>
+<h1>Nav Jalsa organiser</h1>
+<p><small>Sold: <b id="sold">0</b> of 30 passes</small></p>
+<nav><button data-t="a" class="on">Add payment</button><button data-t="b">Gate scan</button><button data-t="c">List</button></nav>
+
+<section id="a" class="on">
+<p><small>Each time money arrives in PhonePe, add its UPI reference (UTR) and amount here. Only payments listed here will be accepted at the gate.</small></p>
+<label>UPI reference (12-digit UTR)<input id="pu" inputmode="numeric" maxlength="12"></label>
+<label>Or upload the payment screenshot to read the UTR<input id="ps" type="file" accept="image/*"></label><small id="po"></small>
+<label>Amount received in rupees (multiple of 450)<input id="pa" inputmode="numeric"></label>
+<button id="add">Add payment</button>
+<p id="pout"></p>
+</section>
+
+<section id="b">
+<button id="scan">Scan pass with camera</button>
+<video id="v" playsinline muted></video><canvas id="cv" hidden></canvas>
+<label>Or paste the pass code<textarea id="pt" rows="2"></textarea></label>
+<button id="chk">Check</button>
+<div id="res"></div>
+</section>
+
+<section id="c"><button id="csv">Download CSV</button><div id="led"></div></section>
+<p><small>Data is saved in this phone's browser only. Use one phone at the gate and download the CSV as a backup.</small></p>
+
+<script>
+var CAP=30,PRICE=450,$=function(i){return document.getElementById(i)},L=JSON.parse(localStorage.njl||'[]'),stream;
+function save(){localStorage.njl=JSON.stringify(L);$('sold').textContent=sum()}
+function sum(){return L.reduce(function(t,x){return t+x.q},0)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+async function pid(u){var h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('navjalsa2026:'+u)),a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',b=new Uint8Array(h),s='NJ-';for(var i=0;i<6;i++)s+=a[b[i]%32];return s}
+$('sold').textContent=sum();
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){
+  document.querySelectorAll('nav button,section').forEach(function(e){e.classList.remove('on')});
+  b.classList.add('on');$(b.dataset.t).classList.add('on');if(b.dataset.t=='c')ledger();if(b.dataset.t!='b')stop()}});
+$('add').onclick=function(){var u=$('pu').value.trim(),a=parseInt($('pa').value),o=$('pout');
+  if(!/^\d{12}$/.test(u)){o.textContent='The UTR must be 12 digits.';return}
+  if(!(a>0)||a%PRICE){o.textContent='Amount must be a multiple of \u20B9'+PRICE+'.';return}
+  if(L.some(function(x){return x.u===u})){o.textContent='This UTR is already added.';return}
+  var q=a/PRICE,s=sum();if(s+q>CAP){o.textContent='Only '+(CAP-s)+' passes left.';return}
+  L.push({u:u,q:q,used:0,n:'',t:Date.now()});save();o.textContent='Added '+q+' pass(es). Sold '+(s+q)+' of '+CAP+'.';$('pu').value='';$('pa').value=''};
+function loadT(){return new Promise(function(res,rej){if(window.Tesseract)return res();var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+function readUtr(t){var m=t.match(/(?:UTR|UPI\s*(?:Ref|Transaction)[^\d]{0,20})[^\d]{0,12}((?:\d ?){12})/i);if(m)return m[1].replace(/\s/g,'');
+  var all=t.replace(/(\d) (?=\d)/g,'$1').match(/(?<!\d)\d{12}(?!\d)/g);return all?all[0]:''}
+$('ps').onchange=async function(){var f=this.files[0];if(!f)return;$('po').textContent='Reading screenshot...';
+  try{await loadT();var r=await Tesseract.recognize(f,'eng'),u=readUtr(r.data.text);if(u)$('pu').value=u;$('po').textContent=u?'UTR filled in. Please check it.':'Could not read the UTR. Type it in.'}
+  catch(e){$('po').textContent='Could not read the screenshot. Type the UTR in.'}};
+function show(c,h){var r=$('res');r.className=c;r.innerHTML=h}
+async function check(txt){var a=txt.trim().split('|');
+  if(a[0]!='NJ1'||a.length<4){show('bad','Not a Nav Jalsa pass.');return}
+  var id=a[1],u=a[2],n=a.slice(3).join('|');
+  if(await pid(u)!==id){show('bad','<b>FAKE PASS.</b> Pass ID does not match. Do not admit.');return}
+  var e=L.find(function(x){return x.u===u});
+  if(!e){show('bad','<b>NOT PAID.</b> No payment with UTR '+esc(u)+' in your list. Do not admit.');return}
+  e.n=n;save();var left=e.q-e.used;
+  if(left<=0){show('bad','<b>ALREADY USED.</b> '+esc(n)+' ('+id+'), all '+e.q+' entries used.');return}
+  show('ok','<b>VALID</b><br>'+esc(n)+' &middot; '+id+'<br>Paid for '+e.q+'. Entries left: '+left+
+    '<br><input id="ad" type="number" min="1" max="'+left+'" value="'+left+'"><button id="adb">Admit</button>');
+  $('adb').onclick=function(){var k=Math.min(left,Math.max(1,parseInt($('ad').value)||1));e.used+=k;save();show('ok','Admitted '+k+'. Left: '+(e.q-e.used))}}
+$('chk').onclick=function(){check($('pt').value)};
+$('scan').onclick=async function(){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  var v=$('v');v.srcObject=stream;await v.play();v.style.display='block';loop()}catch(e){show('bad','Camera not available. Paste the code instead.')}};
+function loop(){if(!stream)return;var v=$('v'),c=$('cv');
+  if(v.videoWidth){c.width=v.videoWidth;c.height=v.videoHeight;var x=c.getContext('2d');x.drawImage(v,0,0);
+    var q=jsQR(x.getImageData(0,0,c.width,c.height).data,c.width,c.height);if(q){stop();check(q.data);return}}
+  requestAnimationFrame(loop)}
+function stop(){if(stream)stream.getTracks().forEach(function(t){t.stop()});stream=null;$('v').style.display='none'}
+function ledger(){$('led').innerHTML='<table><tr><th>UTR</th><th>Passes</th><th>Used</th><th>Name</th><th></th></tr>'+L.map(function(x,i){return '<tr><td>'+x.u+'</td><td>'+x.q+'</td><td>'+x.used+'</td><td>'+esc(x.n)+'</td><td><a href="#" data-d="'+i+'" style="color:#ff8f26">remove</a></td></tr>'}).join('')+'</table>';
+  document.querySelectorAll('[data-d]').forEach(function(a){a.onclick=function(e){e.preventDefault();if(confirm('Remove this payment?')){L.splice(+a.dataset.d,1);save();ledger()}}})}
+$('csv').onclick=function(){var s='utr,passes,used,name\n'+L.map(function(x){return [x.u,x.q,x.used,'"'+(x.n||'').replace(/"/g,'""')+'"'].join(',')}).join('\n');
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'text/csv'}));a.download='nav-jalsa-payments.csv';a.click()};
+</script></body></html>
