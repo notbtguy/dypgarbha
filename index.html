@@ -291,7 +291,7 @@ footer{position:relative;z-index:2;text-align:center;padding:30px 20px 60px;font
   addEventListener('scroll',sb,{passive:true});
   function bt(){var d=Math.ceil((end-new Date())/864e5);$('barTxt').textContent=d>0?d+' days to Nav Jalsa':'Nav Jalsa is on!'}
   bt();setInterval(bt,60000);
-  function upi(){var a=qty*PRICE,h='upi://pay?pa=sangle716@icici&pn=Nav%20Jalsa&am='+a+'&cu=INR&tn=Nav%20Jalsa%20'+qty+'%20pass';$('upi').href=h;$('book').href=h;$('upi').textContent='Pay \u20B9'+a+' with UPI app';$('pq').textContent=qty}
+  function upi(){var a=qty*PRICE,h='upi://pay?pa=9172237939-2@axl&pn=Nav%20Jalsa&am='+a+'&cu=INR&tn=Nav%20Jalsa%20'+qty+'%20pass';$('upi').href=h;$('book').href=h;$('upi').textContent='Pay \u20B9'+a+' with UPI app';$('pq').textContent=qty}
   $('minus').addEventListener('click',upi);$('plus').addEventListener('click',upi);upi();
   $('sub').onclick=async function(){var n=$('fn').value.trim(),b=$('fb').value.trim(),u=$('fu').value.replace(/\s/g,''),m=$('msg');
     if(!n||!b){m.textContent='Please enter your name and batch.';return}
